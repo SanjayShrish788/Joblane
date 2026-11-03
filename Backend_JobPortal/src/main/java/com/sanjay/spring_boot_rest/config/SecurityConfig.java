@@ -22,6 +22,7 @@ public class SecurityConfig {
     @Autowired
     private UserDetailsService userDetailsService;
 
+    /** Checks database-backed accounts with the same BCrypt cost used at registration. */
     @Bean
     public AuthenticationProvider authProvider() {
 
@@ -33,11 +34,14 @@ public class SecurityConfig {
         return provider;
     }
 
+    /** Allows public browsing and registration while protecting all other API requests. */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http)
             throws Exception {
 
+        // The current API disables CSRF and uses Basic auth; review CSRF policy before production.
         http.csrf(customizer -> customizer.disable());
+        // Apply controller @CrossOrigin rules before authentication, including preflight requests.
         http.cors(Customizer.withDefaults());
 
         http.authorizeHttpRequests(request ->
@@ -48,6 +52,7 @@ public class SecurityConfig {
 
         http.httpBasic(Customizer.withDefaults());
 
+        // Each protected request must carry credentials; no login session is stored on the server.
         http.sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         );

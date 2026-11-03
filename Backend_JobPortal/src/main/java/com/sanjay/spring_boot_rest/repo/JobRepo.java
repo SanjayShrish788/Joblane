@@ -10,6 +10,7 @@ import java.util.List;
 
 @Repository
 public interface JobRepo extends JpaRepository<JobPost,Integer> {
+    // Spring Data derives a substring query from this name; either field may match.
     List<JobPost> findByPostProfileContainingOrPostDescContaining(String postProfile, String postDesc);
 }
 

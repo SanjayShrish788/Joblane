@@ -15,31 +15,35 @@ public class JobService {
     public JobRepo repo;
 
 
-    // method to add a jobPost
+    /** Saves a job to PostgreSQL; an existing ID updates its record. */
     public void addJob(JobPost jobPost) {
         repo.save(jobPost);
 
     }
 
-    //method to return all JobPosts
+    /** Reads persisted jobs rather than an in-memory sample list. */
     public List<JobPost> getAllJobs() {
         return repo.findAll();
 
 
     }
 
+    /** Returns an empty job when the requested ID is absent (the current API convention). */
     public JobPost getJob(int postId) {
         return repo.findById(postId).orElse(new JobPost());
     }
 
+    /** Saves the supplied fields; JPA also inserts if this ID does not exist. */
     public void updateJob(JobPost jobPost) {
         repo.save(jobPost);
     }
 
+    /** Removes the persisted job identified by its primary key. */
     public void deleteJob(int postId){
         repo.deleteById(postId);
     }
 
+    /** Loads fixed sample IDs; calling this can overwrite jobs with those IDs. */
     public void load() {
         List<JobPost> jobs =
                 new ArrayList<>(List.of(
@@ -53,6 +57,7 @@ public class JobService {
         repo.saveAll(jobs);
     }
 
+    /** Matches the same keyword against either the title or description. */
     public List<JobPost> search(String keyword) {
         return repo.findByPostProfileContainingOrPostDescContaining(keyword,keyword);
     }

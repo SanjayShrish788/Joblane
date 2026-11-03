@@ -3,10 +3,12 @@ import axios from 'axios';
 import { BrowserRouter, Link, NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import './App.css';
 
+// Share the API URL across requests; attach Basic credentials only when needed.
 const api = axios.create({ baseURL: 'http://localhost:8080' });
 const emptyJob = { postProfile: '', postDesc: '', reqExperience: 0, postTechStack: [] };
 const accents = ['purple', 'blue', 'orange', 'green', 'pink'];
 
+// Own shared account, job, and bookmark state so every route stays in sync.
 function AppContent() {
   // Keep credentials in memory only; signing out or refreshing clears them.
   const [account, setAccount] = useState(null);
@@ -14,10 +16,12 @@ function AppContent() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // Bookmarks belong to this browser, not to an account in PostgreSQL.
   const [saved, setSaved] = useState(() => {
     try { return JSON.parse(localStorage.getItem('savedJobs') || '[]'); } catch { return []; }
   });
   const navigate = useNavigate();
+  // Reuse this fetch after mutations and retries; failures become visible UI messages.
   const loadJobs = async () => {
     setLoading(true);
     try { const { data } = await api.get('/jobPosts'); setJobs(data); setError(''); }
@@ -26,6 +30,7 @@ function AppContent() {
   };
   useEffect(() => { loadJobs(); }, []);
   useEffect(() => { localStorage.setItem('savedJobs', JSON.stringify(saved)); }, [saved]);
+  // Use the previous state so rapid clicks do not overwrite other bookmark changes.
   const toggleSave = (id) => setSaved((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id]);
   const login = async (username, password) => {
     const credentials = { username, password };
@@ -33,6 +38,7 @@ function AppContent() {
     await api.get('/jobPosts', { auth: credentials });
     setAuth(credentials); setAccount(username);
   };
+  // Forget credentials without deleting the account or browser bookmarks.
   const logout = () => { setAccount(null); setAuth(null); navigate('/'); };
   return <>
     <header className="header"><Link to="/" className="brand"><span className="brand-icon">j<span>↗</span></span> joblane<span className="brand-dot">.</span></Link>
@@ -52,16 +58,21 @@ function AppContent() {
   </>;
 }
 
+// Both the main board and saved page use the same filters and job cards.
 function JobBoard({ jobs, saved, toggleSave, loading, error, loadJobs, savedOnly, account, auth }) {
   const [query, setQuery] = useState('');
+  // Keep the submitted search separate from text still being typed.
   const [search, setSearch] = useState('');
   const [experience, setExperience] = useState('all');
   const [skill, setSkill] = useState('All skills');
   const [sort, setSort] = useState('latest');
   const [selected, setSelected] = useState(null);
   const [actionError, setActionError] = useState('');
+  // Build unique skill options from the loaded jobs rather than hard-coding them.
   const skills = [...new Set(jobs.flatMap((job) => job.postTechStack || []))];
+  // Filter locally across titles, descriptions, and skills. Higher IDs approximate newest first.
   const filtered = jobs.filter((job) => (!savedOnly || saved.includes(job.postId)) && `${job.postProfile} ${job.postDesc} ${(job.postTechStack || []).join(' ')}`.toLowerCase().includes(search.toLowerCase()) && (skill === 'All skills' || (job.postTechStack || []).includes(skill)) && (experience === 'all' || (experience === 'early' ? job.reqExperience <= 2 : job.reqExperience >= 3))).sort((a, b) => sort === 'experience' ? a.reqExperience - b.reqExperience : b.postId - a.postId);
+  // Wait for the authenticated delete to succeed before refreshing the board.
   const deleteJob = async (id) => {
     if (!window.confirm('Delete this job permanently?')) return;
     try { await api.delete(`/jobPost/${id}`, { auth }); setSelected(null); await loadJobs(); }
@@ -82,10 +93,13 @@ function JobBoard({ jobs, saved, toggleSave, loading, error, loadJobs, savedOnly
   </main>;
 }
 
+// Reuse one form for registration and login; the register prop chooses the mode.
 function AuthPage({ register, login }) {
   const [username, setUsername] = useState(''); const [password, setPassword] = useState(''); const [confirm, setConfirm] = useState('');
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const navigate = useNavigate();
+  // Clear passwords and errors when switching between the two account screens.
   useEffect(() => { setError(''); setPassword(''); setConfirm(''); }, [register]);
+  // Registration creates the account first, then uses the existing Basic login flow.
   const submit = async (e) => {
     e.preventDefault(); setError('');
     if (register && password !== confirm) { setError('Your passwords don’t match.'); return; }
@@ -93,6 +107,7 @@ function AuthPage({ register, login }) {
     try {
       if (register) await api.post('/register', { username: username.trim(), password });
       await login(username.trim(), password);
+      // Resume posting when the user reached login through the Post a job link.
       navigate(new URLSearchParams(window.location.search).get('next') === 'create' ? '/create' : '/');
     } catch (err) { setError(err.response?.status === 409 ? 'That username is already taken. Try another one.' : err.response?.status === 401 ? 'Incorrect username or password.' : register ? 'Couldn’t create your account. Use a username of 3–40 letters, numbers, dots, dashes or underscores, and a password of 8–72 bytes.' : 'Unable to log in. Check your connection and try again.'); }
     finally { setBusy(false); }
@@ -100,14 +115,18 @@ function AuthPage({ register, login }) {
   return <main className="auth-layout"><section className="auth-story"><div className="eyebrow">YOUR FUTURE IS OPEN</div><h1>Good things<br />start with<br /><em>a first step.</em></h1><p>A new role. A fresh perspective.<br />A little closer to where you want to be.</p><span className="auth-star">✳</span><div className="auth-story-bottom">MAKE ROOM FOR WHAT’S NEXT. ↗</div></section><section className="auth-panel"><div className="eyebrow">{register ? 'LET’S GET YOU STARTED' : 'GOOD TO SEE YOU AGAIN'}</div><h2>{register ? 'Your next chapter awaits.' : 'Welcome back.'}</h2><p>{register ? 'Create your account and find your kind of work.' : 'Log in and pick up where you left off.'}</p><form onSubmit={submit}>{error && <div className="notice error" role="alert">{error}</div>}<label>Username<input autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required minLength={3} maxLength={40} pattern="[A-Za-z0-9_.\-]+" placeholder="Choose your username" /></label>{register && <small>3–40 letters, numbers, dots, dashes or underscores.</small>}<label>Password<input type="password" autoComplete={register ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={register ? 8 : 1} placeholder={register ? 'At least 8 characters' : 'Enter your password'} /></label>{register && <label>Confirm password<input type="password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="One more time" /></label>}<button className="button button-dark" disabled={busy}>{busy ? 'One moment…' : register ? 'Create account ↗' : 'Log in ↗'}</button></form><div className="auth-switch">{register ? 'Already have an account?' : 'New around here?'} <Link to={register ? '/login' : '/register'}>{register ? 'Log in' : 'Create an account'} ↗</Link></div><Link className="back-link" to="/">← Back to opportunities</Link></section></main>;
 }
 
+// A route ID selects edit mode; without one, this form publishes a new job.
 function JobForm({ account, auth, jobs, loadJobs }) {
   const { id } = useParams(); const navigate = useNavigate();
   const [form, setForm] = useState(emptyJob); const [skills, setSkills] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  // Populate edit fields once jobs arrive, including after a direct page load.
   useEffect(() => { if (id) { const job = jobs.find((j) => j.postId === Number(id)); if (job) { setForm(job); setSkills((job.postTechStack || []).join(', ')); } } else { setForm(emptyJob); setSkills(''); } }, [id, jobs]);
   if (!account) return <main className="empty-state"><h1>A great hire starts here.</h1><p>Log in to post or manage an opportunity.</p><Link className="button button-dark" to="/login?next=create">Log in ↗</Link></main>;
   const submit = async (e) => {
     e.preventDefault(); setBusy(true); setError('');
     try {
+      // Convert form strings to API types and remove empty or duplicate skills.
+      // New IDs use the current list; simultaneous publishers can choose the same ID.
       const payload = { ...form, postId: id ? Number(id) : Math.max(0, ...jobs.map((j) => j.postId)) + 1, reqExperience: Number(form.reqExperience), postTechStack: [...new Set(skills.split(',').map((s) => s.trim()).filter(Boolean))] };
       if (id) await api.put('/jobPost', payload, { auth }); else await api.post('/jobPost', payload, { auth });
       await loadJobs(); navigate('/');

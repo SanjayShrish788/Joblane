@@ -15,6 +15,7 @@ public class MyUserDetailsService implements UserDetailsService{
     @Autowired
     private UserRepo repo;
 
+    /** Supplies the stored user and password hash to Spring Security for login checks. */
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = repo.findByUsername(username);

@@ -21,10 +21,12 @@ public class UserController {
         this.service = service;
     }
 
+    /** Creates an account without exposing its password hash in the response. */
     @PostMapping("/register")
     public synchronized ResponseEntity<Map<String, String>> register(@RequestBody User user) {
         String username = user.getUsername() == null ? "" : user.getUsername().trim();
         String password = user.getPassword();
+        // BCrypt limits input to 72 bytes, which may be fewer than 72 Unicode characters.
         if (!username.matches("[A-Za-z0-9_.-]{3,40}") || password == null
                 || password.length() < 8 || password.getBytes(StandardCharsets.UTF_8).length > 72) {
             return ResponseEntity.badRequest().body(Map.of("message", "Invalid username or password"));
@@ -32,10 +34,11 @@ public class UserController {
         if (users.findByUsername(username) != null) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "Username already exists"));
         }
-        // The existing User entity uses manually assigned IDs.
+        // IDs are manual. The synchronized method serializes registration in this instance only.
         int nextId = users.findAll().stream().mapToInt(User::getId).max().orElse(0) + 1;
         user.setId(nextId);
         user.setUsername(username);
+        // UserService hashes the password; return only the public username.
         service.saveUser(user);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("username", username));
     }
