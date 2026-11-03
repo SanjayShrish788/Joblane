@@ -1,0 +1,22 @@
+# Dependencies and generated output
+**/node_modules/
+**/target/
+**/build/
+**/coverage/
+*.log
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+**/application-local.properties
+
+# Editors and OS files
+.vscode/
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Local previews
+joblane-preview.png
