@@ -1,12 +1,20 @@
 # Joblane deployment
 
+Live frontend: https://joblane-six.vercel.app
+
+Live API health: https://joblane-api.onrender.com/actuator/health
+
+Verified on 4 November 2026: Java/Maven tests, frontend tests/build, live registration and job create/read/update/delete, rejected anonymous writes, allowed/denied CORS, database health, successful schema migration, frontend rendering and direct login route. The temporary job was removed with explicit approval; a verification-only account remains. Render HTTP health-check configuration was saved and confirmed through the integration.
+
+Runtime code commit: `2a1123bcab76c1e5e491571d2260b171916b0a4a`. Later documentation/example commits do not change the deployed runtime. Render uses manual deployments; Vercel was deployed through its CLI, without automatic Git integration.
+
 Production runs the `deployment/production` branch. The frontend remains Create React App, with the original UI and browser routes. Jobs can now be edited/deleted only by their creator; new IDs are assigned by PostgreSQL.
 
 ## Backend
 
 Build root: `Backend_JobPortal`. Run Java 21 and `./mvnw -B -ntp verify` against a disposable PostgreSQL database, supplying `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD`. Tests create accounts and jobs; do not point tests at production.
 
-Render uses the backend Dockerfile/context, Singapore, **Free**, with automatic deployment disabled so checks precede each release. The image uses Java 21, a non-root user, and bounded heap/metaspace/code cache. Set HTTP health path `/actuator/health`; it includes database connectivity and hides details. The MCP service creation API may initially configure only TCP health checks; verify the HTTP setting in Render.
+Render uses the backend Dockerfile/context, Singapore, **Free**, with automatic deployment disabled so checks precede each release. The image uses Java 21, a non-root user, and bounded heap/metaspace/code cache. HTTP health path `/actuator/health` is configured; it includes database connectivity and hides details. The service is managed directly, while render.yaml is a reproducible reference rather than an active Blueprint.
 
 Set `DB_URL` to the credential-free Neon JDBC URL, `DB_USERNAME`, `DB_PASSWORD`, `FRONTEND_ORIGIN` to the exact HTTPS Vercel origin without trailing slash, and `SPRING_PROFILES_ACTIVE=prod`. Render supplies `PORT`. TLS verifies the server hostname and certificate using the Java trust store. Secrets belong only in Render environment variables.
 
