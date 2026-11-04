@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:3000")
+
 public class UserController {
     private final UserRepo users;
     private final UserService service;
@@ -23,7 +23,7 @@ public class UserController {
 
     /** Creates an account without exposing its password hash in the response. */
     @PostMapping("/register")
-    public synchronized ResponseEntity<Map<String, String>> register(@RequestBody User user) {
+    public ResponseEntity<Map<String, String>> register(@RequestBody User user) {
         String username = user.getUsername() == null ? "" : user.getUsername().trim();
         String password = user.getPassword();
         // BCrypt limits input to 72 bytes, which may be fewer than 72 Unicode characters.
@@ -34,12 +34,13 @@ public class UserController {
         if (users.findByUsername(username) != null) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "Username already exists"));
         }
-        // IDs are manual. The synchronized method serializes registration in this instance only.
-        int nextId = users.findAll().stream().mapToInt(User::getId).max().orElse(0) + 1;
-        user.setId(nextId);
+        user.setId(null);
         user.setUsername(username);
         // UserService hashes the password; return only the public username.
-        service.saveUser(user);
+        try { service.saveUser(user); }
+        catch (org.springframework.dao.DataIntegrityViolationException duplicate) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "Username already exists"));
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("username", username));
     }
 }

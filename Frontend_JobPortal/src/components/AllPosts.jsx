@@ -12,7 +12,7 @@ import {
     TextField,
     Typography,
   } from "@mui/material";
-  import axios from "axios";
+  import axios, { API_BASE_URL } from "../api";
   import { useEffect, useState } from "react";
 import { useNavigate } from 'react-router-dom';
 
@@ -33,8 +33,8 @@ const handleEdit = (id) => {
           setError("");
           const keyword = query.trim();
           const url = keyword.length > 2
-            ? `http://localhost:8080/jobPosts/keyword/${encodeURIComponent(keyword)}`
-            : "http://localhost:8080/jobPosts";
+            ? `${API_BASE_URL}/jobPosts/keyword/${encodeURIComponent(keyword)}`
+            : `${API_BASE_URL}/jobPosts`;
           const response = await axios.get(url, { signal: controller.signal });
           setPost(response.data);
         } catch (err) {
@@ -47,7 +47,7 @@ const handleEdit = (id) => {
 
       const handleDelete = async (id) => {
         try {
-          await axios.delete(`http://localhost:8080/jobPost/${id}`);
+          await axios.delete(`${API_BASE_URL}/jobPost/${id}`);
           setPost((posts) => posts.filter((p) => p.postId !== id));
           setError("");
         } catch (err) {

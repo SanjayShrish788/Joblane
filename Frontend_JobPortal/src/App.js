@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from './api';
 import { BrowserRouter, Link, NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import './App.css';
 
 // Share the API URL across requests; attach Basic credentials only when needed.
-const api = axios.create({ baseURL: 'http://localhost:8080' });
+
 const emptyJob = { postProfile: '', postDesc: '', reqExperience: 0, postTechStack: [] };
 const accents = ['purple', 'blue', 'orange', 'green', 'pink'];
 
@@ -89,7 +89,7 @@ function JobBoard({ jobs, saved, toggleSave, loading, error, loadJobs, savedOnly
       {loading ? <div className="empty-state">Finding your next opportunity…</div> : filtered.length === 0 ? <div className="empty-state"><span>⌕</span><h3>{savedOnly ? 'Your shortlist starts here' : 'A new search, a new possibility'}</h3><p>{savedOnly ? 'Tap the bookmark on any job to save it for later.' : 'Try another keyword or reset your filters.'}</p>{savedOnly && <Link className="button button-dark" to="/">Explore jobs ↗</Link>}</div> : <div className="job-grid">{filtered.map((job, index) => <article className="job-card" key={job.postId}><div className="card-top"><div className={`job-logo ${accents[index % accents.length]}`}>{job.postProfile.split(' ').map((w) => w[0]).slice(0, 2).join('')}</div><span className="opportunity-label">OPEN OPPORTUNITY</span><button className={`save-button ${saved.includes(job.postId) ? 'is-saved' : ''}`} aria-label={`${saved.includes(job.postId) ? 'Unsave' : 'Save'} ${job.postProfile}`} aria-pressed={saved.includes(job.postId)} onClick={() => toggleSave(job.postId)}><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z" /></svg></button></div><h3>{job.postProfile}</h3><div className="job-meta"><span>◷ {job.reqExperience}+ years experience</span><span>•</span><span>Technology</span></div><p className="job-description">{job.postDesc}</p><div className="skill-tags">{(job.postTechStack || []).map((s) => <span key={s}>{s}</span>)}</div><div className="card-bottom"><span>Find your next chapter</span><button onClick={() => { setSelected(job); setActionError(''); }}>View role <span>↗</span></button></div></article>)}</div>}
       <div className="end-note">✦ &nbsp; The right opportunity can change everything.</div></div></div>
     </section>
-    {selected && <div className="modal-backdrop" onClick={() => setSelected(null)}><section className="job-modal" role="dialog" aria-modal="true" aria-labelledby="job-title" onClick={(e) => e.stopPropagation()}><button className="modal-close" aria-label="Close job details" onClick={() => setSelected(null)}>×</button><div className="eyebrow">YOUR NEXT POSSIBILITY</div><h2 id="job-title">{selected.postProfile}</h2><span className="pill">{selected.reqExperience}+ years experience</span><h3>About the opportunity</h3><p>{selected.postDesc}</p><h3>What you’ll bring</h3><div className="skill-tags">{(selected.postTechStack || []).map((s) => <span key={s}>{s}</span>)}</div><button className="button button-dark" onClick={() => toggleSave(selected.postId)}>{saved.includes(selected.postId) ? 'Remove from saved' : 'Save this opportunity'} ↗</button>{account && <div className="management"><Link to={`/edit/${selected.postId}`}>Edit job</Link><button onClick={() => deleteJob(selected.postId)}>Delete job</button></div>}</section></div>}
+    {selected && <div className="modal-backdrop" onClick={() => setSelected(null)}><section className="job-modal" role="dialog" aria-modal="true" aria-labelledby="job-title" onClick={(e) => e.stopPropagation()}><button className="modal-close" aria-label="Close job details" onClick={() => setSelected(null)}>×</button><div className="eyebrow">YOUR NEXT POSSIBILITY</div><h2 id="job-title">{selected.postProfile}</h2><span className="pill">{selected.reqExperience}+ years experience</span><h3>About the opportunity</h3><p>{selected.postDesc}</p><h3>What you’ll bring</h3><div className="skill-tags">{(selected.postTechStack || []).map((s) => <span key={s}>{s}</span>)}</div><button className="button button-dark" onClick={() => toggleSave(selected.postId)}>{saved.includes(selected.postId) ? 'Remove from saved' : 'Save this opportunity'} ↗</button>{account && selected.ownerUsername === account && <div className="management"><Link to={`/edit/${selected.postId}`}>Edit job</Link><button onClick={() => deleteJob(selected.postId)}>Delete job</button></div>}</section></div>}
   </main>;
 }
 
@@ -126,8 +126,8 @@ function JobForm({ account, auth, jobs, loadJobs }) {
     e.preventDefault(); setBusy(true); setError('');
     try {
       // Convert form strings to API types and remove empty or duplicate skills.
-      // New IDs use the current list; simultaneous publishers can choose the same ID.
-      const payload = { ...form, postId: id ? Number(id) : Math.max(0, ...jobs.map((j) => j.postId)) + 1, reqExperience: Number(form.reqExperience), postTechStack: [...new Set(skills.split(',').map((s) => s.trim()).filter(Boolean))] };
+      // PostgreSQL assigns IDs for new jobs.
+      const payload = { ...form, postId: id ? Number(id) : undefined, reqExperience: Number(form.reqExperience), postTechStack: [...new Set(skills.split(',').map((s) => s.trim()).filter(Boolean))] };
       if (id) await api.put('/jobPost', payload, { auth }); else await api.post('/jobPost', payload, { auth });
       await loadJobs(); navigate('/');
     } catch { setError('Unable to save this job. Please log in again and retry.'); } finally { setBusy(false); }

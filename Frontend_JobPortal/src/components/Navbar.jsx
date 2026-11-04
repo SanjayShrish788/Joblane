@@ -21,10 +21,10 @@ const Navbar = () => {
               </Typography>
 
               <Box sx={{ m: 0.5, mx: 'auto', width: 80 }}>
-                <Button variant="outlined" href='http://localhost:3000'>Home</Button>
+                <Button variant="outlined" href='/'>Home</Button>
                </Box>
               <Box sx={{ m: 0.5, mx: 'auto', width: 100 }}>
-                <Button variant="outlined" href='http://localhost:3000/create'>Add Job</Button>
+                <Button variant="outlined" href='/create'>Add Job</Button>
               </Box>
         </Toolbar>
       </AppBar>

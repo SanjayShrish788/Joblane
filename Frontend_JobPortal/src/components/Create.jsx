@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import axios, { API_BASE_URL } from "../api";
 import {
   Typography,
   TextField,
@@ -36,7 +36,7 @@ const Create = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     axios
-      .post("http://localhost:8080/jobPost",form)
+      .post(`${API_BASE_URL}/jobPost`,form)
       .then((resp) => {
         console.log(resp.data);
       })
